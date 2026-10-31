@@ -1,0 +1,328 @@
+openapi: 3.1.0
+info:
+  title: Modest Chic Staff Authentication API
+  version: 1.0.0
+  description: Staff-only authentication and session lifecycle. Customer authentication is excluded.
+servers:
+  - url: /api/v1
+tags:
+  - name: staff-auth
+paths:
+  /auth/csrf:
+    get:
+      tags: [staff-auth]
+      summary: Issue a signed double-submit CSRF token
+      responses:
+        '204':
+          description: CSRF cookie was set; no response body.
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+              description: Readable signed `mc_csrf` cookie scoped to `/`.
+  /admin/staff/invitations:
+    post:
+      tags: [staff-auth]
+      summary: Invite a staff member
+      security: [{ bearerAuth: [] }]
+      parameters: [{$ref: '#/components/parameters/csrfHeader'}, {$ref: '#/components/parameters/originHeader'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, roles]
+              properties:
+                email: { type: string, format: email, maxLength: 255 }
+                roles: { type: array, minItems: 1, uniqueItems: true, items: { type: string } }
+      responses:
+        '202': { description: Invitation queued through the transactional email outbox. }
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': { description: Normalized email already belongs to an account. }
+        '429': {$ref: '#/components/responses/RateLimited'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /auth/accept-invitation:
+    post:
+      tags: [staff-auth]
+      summary: Accept an invitation and set the initial password
+      parameters: [{$ref: '#/components/parameters/csrfHeader'}, {$ref: '#/components/parameters/originHeader'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password, display_name]
+              properties:
+                token: { type: string, minLength: 32 }
+                password: { type: string, minLength: 12, maxLength: 72, description: Must be no more than 72 UTF-8 bytes. }
+                display_name: { type: string, minLength: 1, maxLength: 255 }
+      responses:
+        '204': { description: Invitation consumed and staff account activated. }
+        '400': {$ref: '#/components/responses/InvalidOneTimeToken'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /auth/login:
+    post:
+      tags: [staff-auth]
+      summary: Authenticate staff using email, password, and TOTP when enabled
+      parameters: [{$ref: '#/components/parameters/csrfHeader'}, {$ref: '#/components/parameters/originHeader'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email, maxLength: 255 }
+                password: { type: string, minLength: 1, maxLength: 72 }
+                totp_code: { type: string, pattern: '^[0-9]{6}$' }
+      responses:
+        '200':
+          description: Successful staff login.
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+              description: Rotating refresh token; HttpOnly, Secure, SameSite=Strict, Path=/api/v1/auth; max-age at most seven days.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SessionResponse'}
+        '401': {$ref: '#/components/responses/GenericAuthenticationFailure'}
+        '403': {$ref: '#/components/responses/CsrfOrOriginFailure'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /auth/refresh:
+    post:
+      tags: [staff-auth]
+      summary: Rotate the refresh credential and issue a new access token
+      parameters: [{$ref: '#/components/parameters/csrfHeader'}, {$ref: '#/components/parameters/originHeader'}]
+      responses:
+        '200':
+          description: Refresh credential rotated.
+          headers:
+            Set-Cookie: { schema: { type: string }, description: Same protected cookie attributes as login. }
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SessionResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/CsrfOrOriginFailure'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+  /auth/logout:
+    post:
+      tags: [staff-auth]
+      summary: Revoke the current refresh session family
+      parameters: [{$ref: '#/components/parameters/csrfHeader'}, {$ref: '#/components/parameters/originHeader'}]
+      responses:
+        '204':
+          description: Session family revoked; refresh cookie cleared.
+          headers:
+            Set-Cookie: { schema: { type: string }, description: Expired `mc_staff_refresh` cookie. }
+        '403': {$ref: '#/components/responses/CsrfOrOriginFailure'}
+  /auth/password/forgot:
+    post:
+      tags: [staff-auth]
+      summary: Request a staff password reset without account enumeration
+      parameters: [{$ref: '#/components/parameters/csrfHeader'}, {$ref: '#/components/parameters/originHeader'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties: { email: { type: string, format: email, maxLength: 255 } }
+      responses:
+        '202':
+          description: Same response for known and unknown email addresses.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties: { message: { const: If the account exists, reset instructions will be sent. } }
+        '403': {$ref: '#/components/responses/CsrfOrOriginFailure'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+  /auth/password/reset:
+    post:
+      tags: [staff-auth]
+      summary: Consume a password reset token
+      parameters: [{$ref: '#/components/parameters/csrfHeader'}, {$ref: '#/components/parameters/originHeader'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, new_password]
+              properties:
+                token: { type: string, minLength: 32 }
+                new_password: { type: string, minLength: 12, maxLength: 72, description: Must be no more than 72 UTF-8 bytes. }
+      responses:
+        '204': { description: Password updated and all staff refresh sessions revoked. }
+        '400': {$ref: '#/components/responses/InvalidOneTimeToken'}
+        '403': {$ref: '#/components/responses/CsrfOrOriginFailure'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /auth/password/change:
+    post:
+      tags: [staff-auth]
+      summary: Change password after proving the current password
+      security: [{ bearerAuth: [] }]
+      parameters: [{$ref: '#/components/parameters/csrfHeader'}, {$ref: '#/components/parameters/originHeader'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password]
+              properties:
+                current_password: { type: string, minLength: 1, maxLength: 72 }
+                new_password: { type: string, minLength: 12, maxLength: 72, description: Must be no more than 72 UTF-8 bytes. }
+      responses:
+        '204': { description: Password changed and all refresh sessions revoked. }
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/CsrfOrOriginFailure'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /auth/setup-totp:
+    post:
+      tags: [staff-auth]
+      summary: Begin TOTP enrollment for the authenticated staff member
+      security: [{ bearerAuth: [] }]
+      parameters: [{$ref: '#/components/parameters/csrfHeader'}, {$ref: '#/components/parameters/originHeader'}]
+      responses:
+        '200':
+          description: Provisional enrollment material; provisioning URI must not be logged or cached.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [secret, qr_code_url]
+                properties:
+                  secret: { type: string }
+                  qr_code_url: { type: string, format: uri }
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /auth/verify-totp:
+    post:
+      tags: [staff-auth]
+      summary: Verify enrollment code and activate TOTP
+      security: [{ bearerAuth: [] }]
+      parameters: [{$ref: '#/components/parameters/csrfHeader'}, {$ref: '#/components/parameters/originHeader'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [totp_code]
+              properties: { totp_code: { type: string, pattern: '^[0-9]{6}$' } }
+      responses:
+        '204': { description: TOTP is enabled; accepted counter is recorded to reject replay. }
+        '400': { description: Invalid or previously accepted code. }
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /auth/me:
+    get:
+      tags: [staff-auth]
+      summary: Return active staff identity and current permissions
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Current persisted staff status and permissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, email, name, permission_keys, totp_enabled]
+                properties:
+                  id: { type: string, format: uuid }
+                  email: { type: string, format: email }
+                  name: { type: string }
+                  permission_keys: { type: array, items: { type: string } }
+                  totp_enabled: { type: boolean }
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    csrfHeader:
+      name: X-CSRF-Token
+      in: header
+      required: true
+      schema: { type: string }
+      description: Must match the signed readable `mc_csrf` cookie.
+    originHeader:
+      name: Origin
+      in: header
+      required: true
+      schema: { type: string, format: uri }
+      description: Must exactly match a configured trusted browser origin.
+  schemas:
+    SessionResponse:
+      type: object
+      required: [access_token, token_type, expires_in, staff_user, auth_state]
+      properties:
+        access_token: { type: string }
+        token_type: { const: Bearer }
+        expires_in: { type: integer, const: 900 }
+        auth_state:
+          type: string
+          enum: [ACTIVE, TOTP_ENROLLMENT_REQUIRED]
+          description: When enrollment is required, the access token is limited to TOTP enrollment/verification and other narrowly scoped account-security operations; it grants no admin permission.
+        staff_user:
+          type: object
+          required: [id, name, roles]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            roles: { type: array, items: { type: string } }
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        request_id: { type: string }
+  responses:
+    GenericAuthenticationFailure:
+      description: Same status and body for unknown, invited, suspended, invalid-password, and invalid-TOTP identities.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    InvalidOneTimeToken:
+      description: Token is invalid, expired, revoked, consumed, or superseded.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    CsrfOrOriginFailure:
+      description: CSRF proof or exact Origin validation failed.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Unauthorized:
+      description: Missing, invalid, expired, or revoked authentication.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Forbidden:
+      description: Active identity lacks current permission or production TOTP enrollment.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    RateLimited:
+      description: Request limit reached; includes Retry-After.
+      headers:
+        Retry-After: { schema: { type: integer } }
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    ValidationError:
+      description: Request field validation failed.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}

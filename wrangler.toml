@@ -1,0 +1,4 @@
+# Cloudflare Pages static hosting. Configure the build command as npm run build:static.
+name = "modest-chic-by-hira"
+pages_build_output_dir = "./out"
+compatibility_date = "2026-10-31"

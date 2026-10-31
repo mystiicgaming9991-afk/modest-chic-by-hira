@@ -1,0 +1,1 @@
+"""Modest Chic backend application."""

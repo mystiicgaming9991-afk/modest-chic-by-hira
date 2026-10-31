@@ -1,0 +1,78 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: modest
+      POSTGRES_PASSWORD: modest
+      POSTGRES_DB: modest_chic
+    ports:
+      - "55532:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U modest -d modest_chic"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "56379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://modest:modest@postgres:5432/modest_chic
+      REDIS_URL: redis://redis:6379/0
+      APP_ENV: development
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:-local-development-jwt-signing-key-material-32}
+      CSRF_SIGNING_KEY: ${CSRF_SIGNING_KEY:-local-development-csrf-signing-key-material-32}
+      TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:-0123456789abcdef0123456789abcdef}
+      OUTBOX_ENCRYPTION_KEY: ${OUTBOX_ENCRYPTION_KEY:-abcdef0123456789abcdef0123456789}
+      TRUSTED_ORIGINS: '["http://localhost:3000","http://localhost:3001"]'
+      ADMIN_BASE_URL: http://localhost:3000/admin
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-console}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-admin@modestchic.pk}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    command: uv run arq modest_chic_backend.worker.WorkerSettings
+    environment:
+      DATABASE_URL: postgresql+asyncpg://modest:modest@postgres:5432/modest_chic
+      REDIS_URL: redis://redis:6379/0
+      APP_ENV: development
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:-local-development-jwt-signing-key-material-32}
+      CSRF_SIGNING_KEY: ${CSRF_SIGNING_KEY:-local-development-csrf-signing-key-material-32}
+      TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:-0123456789abcdef0123456789abcdef}
+      OUTBOX_ENCRYPTION_KEY: ${OUTBOX_ENCRYPTION_KEY:-abcdef0123456789abcdef0123456789}
+      TRUSTED_ORIGINS: '["http://localhost:3000","http://localhost:3001"]'
+      ADMIN_BASE_URL: http://localhost:3000/admin
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-console}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-admin@modestchic.pk}
+    healthcheck:
+      test: ["CMD-SHELL", "kill -0 1"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+volumes:
+  postgres_data:

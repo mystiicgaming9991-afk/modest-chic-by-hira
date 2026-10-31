@@ -1,0 +1,313 @@
+openapi: 3.1.0
+info:
+  title: Modest Chic Commerce Foundation API
+  version: 1.0.0
+  description: Store settings and policy version management for authenticated staff. Requires `settings.manage` permission for mutations.
+servers:
+  - url: /api/v1
+tags:
+  - name: admin-settings
+  - name: admin-policies
+paths:
+  # ── Store Settings ──────────────────────────────────────────────
+
+  /admin/settings:
+    get:
+      tags: [admin-settings]
+      summary: List all non-secret store settings
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Current effective value for every non-secret setting.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SettingItem'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+    put:
+      tags: [admin-settings]
+      summary: Update a non-secret store setting
+      description: >
+        Requires the current version to prevent stale writes. The version field in the
+        request must match the stored version; the stored version is incremented on success.
+        Secret settings cannot be updated through this endpoint.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, value, version]
+              properties:
+                key:
+                  type: string
+                  maxLength: 100
+                  description: Stable setting key.
+                value:
+                  description: The new JSON value. Must be valid JSON.
+                version:
+                  type: integer
+                  minimum: 1
+                  description: Current stored version for optimistic concurrency.
+      responses:
+        '200':
+          description: Setting updated; new version returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingItem'
+        '400':
+          description: Unknown key, invalid value, or not a valid JSON value.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: Version mismatch; the setting was modified by another actor.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/settings/secrets:
+    put:
+      tags: [admin-settings]
+      summary: Write a secret setting value (owner-only)
+      description: >
+        Accepts a plaintext value, encrypts it with AES-256-GCM, and stores the ciphertext.
+        The encrypted blob is never returned through GET /admin/settings. Only staff with
+        `settings.manage` and the owner role may use this endpoint.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, value, version]
+              properties:
+                key:
+                  type: string
+                  maxLength: 100
+                value:
+                  description: The plaintext secret value (any valid JSON).
+                version:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: Secret stored; only `"***"` placeholder returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingItem'
+        '400':
+          description: Unknown key or setting is not marked as secret.
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: Version mismatch.
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/settings/secrets/{key}:
+    get:
+      tags: [admin-settings]
+      summary: Read a single decrypted secret value (owner-only)
+      description: >
+        Decrypts the stored ciphertext and returns the plaintext. Only staff with
+        `settings.manage` and the owner role may use this endpoint.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 100
+      responses:
+        '200':
+          description: Decrypted secret value.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  key: { type: string }
+                  value: { description: The decrypted plaintext value. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: No secret setting with this key exists.
+
+  # ── Policy Versions ─────────────────────────────────────────────
+
+  /admin/policies:
+    get:
+      tags: [admin-policies]
+      summary: List policy versions
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+          description: Filter by policy type.
+        - name: active_only
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: When true, return only the currently effective version for each type.
+      responses:
+        '200':
+          description: Policy versions matching filters.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PolicyVersionItem'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+    post:
+      tags: [admin-policies]
+      summary: Publish a new policy version
+      description: >
+        Inserts an immutable policy version. The version number is auto-incremented
+        within the type. Future-dated `effective_from` values are allowed.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, effective_from, content]
+              properties:
+                type:
+                  type: string
+                  enum: [checkout_bundle, returns, shipping, privacy, terms, cod_confirmation]
+                effective_from:
+                  type: string
+                  format: date-time
+                  description: When this version becomes governing (UTC).
+                content:
+                  description: The immutable policy content (valid JSON).
+      responses:
+        '201':
+          description: Policy version published.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyVersionItem'
+        '400':
+          description: Invalid policy type or content.
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/policies/{type}/effective:
+    get:
+      tags: [admin-policies]
+      summary: Get the currently effective policy for a type
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The effective policy version.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyVersionItem'
+        '404':
+          description: No effective policy exists for this type.
+
+components:
+  schemas:
+    SettingItem:
+      type: object
+      required: [key, value, version, updated_at]
+      properties:
+        key:
+          type: string
+        value:
+          description: The effective value, or `"***"` for secret settings.
+        is_secret:
+          type: boolean
+        version:
+          type: integer
+        updated_by:
+          type: string
+          format: uuid
+        updated_at:
+          type: string
+          format: date-time
+
+    PolicyVersionItem:
+      type: object
+      required: [id, type, version, effective_from, content, approved_by, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+        version:
+          type: integer
+        effective_from:
+          type: string
+          format: date-time
+        content:
+          description: The immutable approved policy content.
+        approved_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        request_id:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: Missing, invalid, expired, or revoked authentication.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Active identity lacks required permission.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ValidationError:
+      description: Request field validation failed.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }

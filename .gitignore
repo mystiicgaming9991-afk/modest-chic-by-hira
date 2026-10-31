@@ -39,3 +39,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Generated static storefront staging
+/.static-site/
+
+# Local verification screenshots and tool caches
+/catalog-preview.png
+/catalog-grid-preview.png
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+
+# Keep the backend setup template, not real environment files
+!backend/.env.example

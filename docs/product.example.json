@@ -1,0 +1,33 @@
+{
+  "id": "premium-chiffon",
+  "slug": "premium-chiffon",
+  "title": "Premium Chiffon Hijab",
+  "description": "Replace this with your actual product description.",
+  "fabric": "Chiffon",
+  "dimensions": "180 x 70 cm",
+  "care": "Replace this with the actual care instructions.",
+  "category": "hijabs",
+  "categories": ["hijabs"],
+  "collections": ["new-arrivals"],
+  "tags": ["chiffon"],
+  "variants": [
+    {
+      "id": "premium-chiffon-rose",
+      "name": "Rose",
+      "color": "Rose",
+      "colorHex": "#C8B5AD",
+      "sku": "CHIFFON-ROSE",
+      "price": 1500,
+      "stock": 5
+    }
+  ],
+  "displayImage": "/images/products/premium-chiffon.webp",
+  "displayImageAlt": "Premium chiffon hijab in rose",
+  "displayImageKind": "brand",
+  "displayImageNote": "Product photograph; colours may vary by screen.",
+  "rating": 0,
+  "reviewCount": 0,
+  "isNew": true,
+  "isBestSeller": false,
+  "isFeatured": false
+}

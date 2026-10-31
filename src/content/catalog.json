@@ -1,0 +1,12 @@
+{
+  "products": [],
+  "categories": [
+    { "id": "hijabs", "slug": "hijabs", "title": "Hijabs", "description": "Explore our hijab collection.", "image": "/images/modest-chic-color-edit.webp", "productCount": 0 },
+    { "id": "accessories", "slug": "accessories", "title": "Accessories", "description": "Little details to complete your look.", "image": "/images/modest-chic-color-edit.webp", "productCount": 0 },
+    { "id": "sets", "slug": "sets", "title": "Gift Sets", "description": "Thoughtful gifts from Modest Chic.", "image": "/images/modest-chic-gift-edit.webp", "productCount": 0 }
+  ],
+  "collections": [
+    { "id": "new-arrivals", "slug": "new-arrivals", "title": "New Arrivals", "description": "New pieces will appear here when the collection is published.", "image": "/images/modest-chic-color-edit.webp", "productCount": 0 },
+    { "id": "best-sellers", "slug": "best-sellers", "title": "Featured Pieces", "description": "A considered edit from Modest Chic.", "image": "/images/modest-chic-color-edit.webp", "productCount": 0 }
+  ]
+}

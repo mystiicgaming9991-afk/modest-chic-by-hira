@@ -1,0 +1,110 @@
+openapi: 3.1.0
+info:
+  title: Modest Chic Shared API Conventions
+  version: 1.0.0
+  description: >
+    Cross-feature contracts for error responses, money representation, pagination,
+    and idempotency. Every new route must conform to these conventions.
+paths: {}
+
+components:
+  schemas:
+    # ── Error Response ────────────────────────────────────────────
+
+    ApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: Stable machine-readable error code (e.g., `SETTING_VERSION_CONFLICT`).
+        message:
+          type: string
+          description: Human-readable explanation, safe for display.
+        request_id:
+          type: string
+          description: Correlation ID for log tracing.
+      example:
+        code: "SETTING_VERSION_CONFLICT"
+        message: "The setting was modified by another request. Reload and retry."
+        request_id: "0192c8a7-1234-7abc-9def-0123456789ab"
+
+    # ── Money ─────────────────────────────────────────────────────
+
+    MoneySchema:
+      description: >
+        Money is stored as integer minor units (PKR paisa) in PostgreSQL.
+        The API accepts and returns decimal-string amounts.
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:
+          type: string
+          pattern: '^\d+(\.\d{2})?$'
+          description: Decimal amount as a string (e.g., "1500.00" for PKR 1,500).
+        currency:
+          type: string
+          enum: [PKR]
+          description: ISO 4217 currency code.
+
+    # ── Pagination ─────────────────────────────────────────────────
+
+    CursorPaginationParams:
+      description: >
+        Cursor-based pagination. Clients pass `after` from the `next_cursor` field
+        of a previous response.
+      type: object
+      properties:
+        after:
+          type: string
+          format: uuid
+          description: Return items after this cursor (the last item ID from the previous page).
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+          description: Maximum items per page.
+
+    CursorPaginationResponse:
+      description: >
+        Paginated response wrapper. When `next_cursor` is null, the client has reached
+        the last page.
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+        next_cursor:
+          type: string
+          format: uuid
+          nullable: true
+          description: Pass as `after` in the next request, or null if no more pages.
+
+    # ── Idempotency ────────────────────────────────────────────────
+
+    IdempotencyHeader:
+      description: >
+        Clients supply a unique `Idempotency-Key` (UUID v4) on mutation endpoints.
+        The server stores the result keyed by this value for 24 hours. A replay returns
+        the stored result without side effects.
+      name: Idempotency-Key
+      in: header
+      schema:
+        type: string
+        format: uuid
+
+    IdempotencyReplayResponse:
+      description: >
+        Returned when a previously processed idempotency key is replayed.
+        The status code matches the original response.
+      type: object
+      properties:
+        idempotency_key:
+          type: string
+          format: uuid
+        original_status:
+          type: integer
+        replayed:
+          type: boolean
+          const: true

@@ -1,0 +1,531 @@
+openapi: 3.1.0
+info:
+  title: Modest Chic Catalog Administration API
+  version: 1.0.0
+  description: Product, variant, category, collection, tag, and media management for staff with `catalog.write` / `catalog.archive` permissions.
+servers:
+  - url: /api/v1
+tags:
+  - name: admin-catalog
+
+paths:
+  # ── Products ────────────────────────────────────────────────────
+
+  /admin/catalog/products:
+    get:
+      tags: [admin-catalog]
+      summary: List products with optional status filter
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [DRAFT, PUBLISHED, ARCHIVED] }
+        - name: after
+          in: query
+          schema: { type: string, format: uuid }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Paginated product list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProductRead'
+                  next_cursor:
+                    type: string
+                    nullable: true
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+    post:
+      tags: [admin-catalog]
+      summary: Create a new product (draft)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slug, title]
+              properties:
+                slug: { type: string, maxLength: 255 }
+                title: { type: string, maxLength: 500 }
+                description: { type: string }
+                fabric: { type: string, maxLength: 255 }
+                care: { type: string }
+                dimensions: { type: string, maxLength: 255 }
+                variants:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/VariantCreate'
+      responses:
+        '201':
+          description: Product created in DRAFT status.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductRead' }
+        '400': { description: Duplicate slug or SKU. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/catalog/products/{product_id}:
+    get:
+      tags: [admin-catalog]
+      summary: Get a product with its variants
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Product detail with variants.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductDetail' }
+        '404': { description: Product not found. }
+
+    patch:
+      tags: [admin-catalog]
+      summary: Update product fields
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string, maxLength: 500 }
+                description: { type: string }
+                fabric: { type: string }
+                care: { type: string }
+                dimensions: { type: string }
+                status: { type: string, enum: [DRAFT, PUBLISHED, ARCHIVED] }
+      responses:
+        '200':
+          description: Updated product.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductRead' }
+        '400': { description: Invalid state transition. }
+        '404': { description: Product not found. }
+
+  # ── Variants ────────────────────────────────────────────────────
+
+  /admin/catalog/products/{product_id}/variants:
+    post:
+      tags: [admin-catalog]
+      summary: Add a variant to a product
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VariantCreate' }
+      responses:
+        '201':
+          description: Variant created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VariantRead' }
+        '400': { description: Duplicate SKU. }
+        '404': { description: Product not found. }
+
+  /admin/catalog/variants/{variant_id}:
+    patch:
+      tags: [admin-catalog]
+      summary: Update a variant (price, dimensions, active state)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: variant_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                price_minor: { type: integer, minimum: 0 }
+                sale_price_minor: { type: integer, minimum: 0 }
+                is_active: { type: boolean }
+                color_name: { type: string }
+                dimensions: { type: string }
+                weight_grams: { type: integer }
+      responses:
+        '200':
+          description: Updated variant.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VariantRead' }
+        '400': { description: Sale price exceeds regular price. }
+        '404': { description: Variant not found. }
+
+  # ── Categories ──────────────────────────────────────────────────
+
+  /admin/catalog/categories:
+    get:
+      tags: [admin-catalog]
+      summary: List all categories
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Category tree.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CategoryRead'
+
+    post:
+      tags: [admin-catalog]
+      summary: Create a category
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slug, name]
+              properties:
+                slug: { type: string }
+                name: { type: string }
+                description: { type: string }
+                parent_id: { type: string, format: uuid }
+                sort_order: { type: integer }
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CategoryRead' }
+        '400': { description: Duplicate slug. }
+
+  /admin/catalog/categories/{category_id}:
+    patch:
+      tags: [admin-catalog]
+      summary: Update category fields
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: category_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                description: { type: string }
+                parent_id: { type: string, format: uuid, nullable: true }
+                sort_order: { type: integer }
+                status: { type: string, enum: [DRAFT, PUBLISHED, ARCHIVED] }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CategoryRead' }
+        '404': { description: Category not found. }
+
+  # ── Collections ─────────────────────────────────────────────────
+
+  /admin/catalog/collections:
+    get:
+      tags: [admin-catalog]
+      summary: List all collections
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CollectionRead'
+
+    post:
+      tags: [admin-catalog]
+      summary: Create a collection
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slug, name]
+              properties:
+                slug: { type: string }
+                name: { type: string }
+                description: { type: string }
+                starts_at: { type: string, format: date-time }
+                ends_at: { type: string, format: date-time }
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CollectionRead' }
+        '400': { description: Duplicate slug. }
+
+  /admin/catalog/collections/{collection_id}/products:
+    put:
+      tags: [admin-catalog]
+      summary: Set collection product membership and order
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: collection_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                product_ids:
+                  type: array
+                  items: { type: string, format: uuid }
+                  description: Ordered list of product IDs.
+      responses:
+        '200':
+          description: Membership updated.
+
+  # ── Media ───────────────────────────────────────────────────────
+
+  /admin/catalog/products/{product_id}/media:
+    post:
+      tags: [admin-catalog]
+      summary: Attach a media record to a product
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [object_key, media_type]
+              properties:
+                object_key: { type: string }
+                media_type: { type: string }
+                alt_text: { type: string }
+                width: { type: integer }
+                height: { type: integer }
+                sort_order: { type: integer }
+                is_primary: { type: boolean }
+                variant_id: { type: string, format: uuid }
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MediaRead' }
+
+  # ── Tags ────────────────────────────────────────────────────────
+
+  /admin/catalog/tags:
+    get:
+      tags: [admin-catalog]
+      summary: List all tags
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TagRead'
+
+    post:
+      tags: [admin-catalog]
+      summary: Create a tag
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TagRead' }
+        '400': { description: Duplicate tag name. }
+
+components:
+  schemas:
+    ProductRead:
+      type: object
+      required: [id, slug, title, status, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        title: { type: string }
+        description: { type: string }
+        fabric: { type: string }
+        care: { type: string }
+        dimensions: { type: string }
+        status: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    ProductDetail:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/ProductRead'
+        - type: object
+          properties:
+            variants:
+              type: array
+              items: { $ref: '#/components/schemas/VariantRead' }
+            media:
+              type: array
+              items: { $ref: '#/components/schemas/MediaRead' }
+
+    VariantCreate:
+      type: object
+      required: [sku, color_name, price_minor]
+      properties:
+        sku: { type: string }
+        color_name: { type: string }
+        color_hex: { type: string, pattern: '^#[0-9A-Fa-f]{6}$' }
+        dimensions: { type: string }
+        weight_grams: { type: integer }
+        price_minor: { type: integer, minimum: 0 }
+        sale_price_minor: { type: integer, minimum: 0 }
+
+    VariantRead:
+      type: object
+      required: [id, product_id, sku, color_name, price_minor, currency, is_active]
+      properties:
+        id: { type: string, format: uuid }
+        product_id: { type: string, format: uuid }
+        sku: { type: string }
+        color_name: { type: string }
+        color_hex: { type: string }
+        dimensions: { type: string }
+        weight_grams: { type: integer }
+        price_minor: { type: integer }
+        sale_price_minor: { type: integer }
+        currency: { type: string }
+        is_active: { type: boolean }
+
+    CategoryRead:
+      type: object
+      required: [id, slug, name, status]
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        name: { type: string }
+        description: { type: string }
+        parent_id: { type: string, format: uuid, nullable: true }
+        sort_order: { type: integer }
+        status: { type: string }
+        children:
+          type: array
+          items: { $ref: '#/components/schemas/CategoryRead' }
+
+    CollectionRead:
+      type: object
+      required: [id, slug, name, status]
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        name: { type: string }
+        description: { type: string }
+        status: { type: string }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+
+    MediaRead:
+      type: object
+      required: [id, product_id, object_key, media_type]
+      properties:
+        id: { type: string, format: uuid }
+        product_id: { type: string, format: uuid }
+        variant_id: { type: string, format: uuid, nullable: true }
+        object_key: { type: string }
+        media_type: { type: string }
+        alt_text: { type: string }
+        width: { type: integer }
+        height: { type: integer }
+        sort_order: { type: integer }
+        is_primary: { type: boolean }
+        status: { type: string }
+
+    TagRead:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Active identity lacks required permission.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ValidationError:
+      description: Request field validation failed.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
