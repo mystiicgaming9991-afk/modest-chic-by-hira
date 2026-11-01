@@ -11,7 +11,9 @@ npm run catalog:check
 npm run build:static
 ```
 
-Publish only `out/` to Cloudflare Pages using `npm run build:static` as the build command. No backend services are required. The real-product catalogue starts empty; add actual products to `src/content/catalog.json`. See [the static storefront guide](docs/STATIC_STOREFRONT.md) for product updates, hosting, optional GA4 setup and the API integration path. GA4 stays disabled without a Measurement ID and visitor consent.
+Publish only `out/` to Cloudflare Pages using `npm run build:static` as the build command. No backend services are required. The real-product catalogue starts empty. Manage products in [Sanity Studio](https://modest-chic-k8aco52i.sanity.studio/); the static build imports published content using `catalogue.config.json`. See [the Sanity catalogue guide](docs/SANITY_CATALOGUE.md) for editing, setup and automatic publishing, and [the static storefront guide](docs/STATIC_STOREFRONT.md) for hosting, optional GA4 setup and the API integration path. GA4 stays disabled without a Measurement ID and visitor consent.
+
+Regular `npm run dev` uses the local file catalogue in `src/content/catalog.json`. To preview Sanity content, run `npm run build:static` and serve `out/` with a static web server. Product edits reach the live site after a successful rebuild; the Publish webhook stays disabled until this feature branch is merged.
 
 The sections below describe the retained API development mode. Use `npm run dev:api` to select it; `npm run dev` uses static catalogue data by default.
 

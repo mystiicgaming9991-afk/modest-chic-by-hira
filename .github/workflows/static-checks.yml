@@ -26,4 +26,24 @@ jobs:
       - run: npm run catalog:check
       - run: npm run lint
       - run: npm test
+      - run: npm run test:static-security
+      - run: npm run test:catalogue
+      - run: npm audit --omit=dev --audit-level=high
       - run: npm run build:static
+        env:
+          STOREFRONT_CATALOG_SOURCE: file
+
+  studio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: studio/package-lock.json
+      - run: npm ci --prefix studio
+      - run: npm --prefix studio run typecheck
+      - run: npm run studio:build
+      - run: npm audit --prefix studio --omit=dev --audit-level=high

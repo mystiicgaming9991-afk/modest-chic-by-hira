@@ -30,7 +30,7 @@ function productDetails(product: Product, variant: ProductVariant, origin: strin
   const base = siteOrigin(origin);
   const image = product.displayImage;
   // Do not describe placeholders or illustrated swatches as product photographs.
-  const hasPhoto = product.displayImageKind === "brand" && image?.startsWith("/images/") && !image.endsWith("product-placeholder.svg");
+  const hasPhoto = (product.displayImageKind === "product" || product.displayImageKind === "brand") && image?.startsWith("/images/") && !image.endsWith("product-placeholder.svg");
   return [
     `${product.title} — ${variant.name}`,
     ...(variant.sku ? [`SKU: ${variant.sku}`] : []),

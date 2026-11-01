@@ -29,6 +29,7 @@ import { useAnalyticsChoice } from "@/components/analytics/analytics-controls";
 import { productEnquiry } from "@/lib/whatsapp";
 import { isStaticStorefront } from "@/lib/storefront-mode";
 import { ProductReviews } from "@/components/reviews/product-reviews";
+import { productImageLabel } from "@/lib/product-image";
 
 export default function ProductPage({
   params,
@@ -105,7 +106,7 @@ function ProductDetail({ product, products }: { product: Product; products: Prod
               {showPhoto ? (
                 <>
                   <Image src={product.displayImage} alt={product.displayImageAlt} fill preload loading="eager" sizes="(max-width: 768px) 100vw, 45vw" className="object-cover object-center" />
-                  <span className="absolute bottom-4 right-4 rounded-full bg-cream/95 px-3 py-1.5 text-xs font-medium text-charcoal shadow-sm">{product.displayImageKind === "brand" ? "Collection photo" : product.displayImageKind === "illustration" ? "Illustrative image" : "Style reference"}</span>
+                  <span className="absolute bottom-4 right-4 rounded-full bg-cream/95 px-3 py-1.5 text-xs font-medium text-charcoal shadow-sm">{productImageLabel(product.displayImageKind)}</span>
                 </>
               ) : (
                 <FabricPreview color={selectedVariant?.colorHex || "#D4C5B9"} name={selectedVariant?.name || product.title} className="h-full w-full" />
@@ -154,13 +155,13 @@ function ProductDetail({ product, products }: { product: Product; products: Prod
             </div>
 
             <div className="text-xs leading-relaxed text-charcoal/75">
-              <p>{showPhoto ? `${product.displayImageNote}. Select a shade below to see its illustrated colour preview.` : "Illustrated colour preview. Select the photo thumbnail to view the styling reference again."}</p>
+              <p>{showPhoto ? `${product.displayImageNote.replace(/[.!]+$/, "")}. Select a shade below to see its illustrated colour preview.` : "Illustrated colour preview. Select the photo thumbnail to view the photograph or reference again."}</p>
               {product.imageCredit && <p className="mt-1">Photo by <a href={product.imageCredit.sourceUrl} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-charcoal">{product.imageCredit.creator}</a> · <a href={product.imageCredit.licenseUrl} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-charcoal">{product.imageCredit.license}</a>{product.imageCredit.license === "CC BY-SA 3.0" ? " · display crop" : ""}</p>}
             </div>
 
             {/* Variant color thumbnails */}
             <div className="flex gap-3 overflow-x-auto pb-2">
-              <button type="button" onClick={() => setShowPhoto(true)} className={`relative h-20 w-16 flex-shrink-0 overflow-hidden rounded-xl border-2 transition-all ${showPhoto ? "border-charcoal shadow-md" : "border-transparent hover:border-sand"}`} aria-label={product.displayImageKind === "brand" ? "View collection photo" : product.displayImageKind === "illustration" ? "View illustrative image" : "View style reference photo"} aria-pressed={showPhoto}>
+              <button type="button" onClick={() => setShowPhoto(true)} className={`relative h-20 w-16 flex-shrink-0 overflow-hidden rounded-xl border-2 transition-all ${showPhoto ? "border-charcoal shadow-md" : "border-transparent hover:border-sand"}`} aria-label={`View ${productImageLabel(product.displayImageKind).toLowerCase()}`} aria-pressed={showPhoto}>
                 <Image src={product.displayImage} alt="" fill loading="eager" sizes="64px" className="object-cover object-center" />
               </button>
               {product.variants.map((variant) => (

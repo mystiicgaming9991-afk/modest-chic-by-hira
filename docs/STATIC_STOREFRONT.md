@@ -1,8 +1,10 @@
 # Static storefront
 
-The public website uses an empty, real-product catalogue in `src/content/catalog.json`. It never imports local database test products. It needs no API, database, Redis, credentials or continuously running computer. WhatsApp is the order-enquiry channel; availability and all order terms are confirmed in chat.
+The public website can build its catalogue from Sanity, selected by `catalogue.config.json`. See [Sanity catalogue setup and publishing](SANITY_CATALOGUE.md). The file source in `src/content/catalog.json` remains intentionally empty and is used for local development and deterministic CI. It never imports local database test products. The deployed storefront needs no running API, database, Redis, credentials or continuously running computer. WhatsApp is the order-enquiry channel; availability and all order terms are confirmed in chat.
 
-## Add a product
+## Add a product in file mode
+
+For Sanity mode, add and publish products in Studio instead. These steps are for `STOREFRONT_CATALOG_SOURCE=file` builds.
 
 1. Copy actual product photographs into `public/images/products/`. Compress them to WebP before adding them; aim for a few hundred KB rather than camera originals.
 2. Copy the object in `docs/product.example.json` into the catalogue's `products` array. The example is documentation only and is not published. Replace every example value with accurate product details and a photo that exists.
@@ -21,6 +23,23 @@ The GitHub repository is `mystiicgaming9991-afk/modest-chic-by-hira`. The packag
 4. Do not configure a Workers deployment command or a Python backend for this static launch.
 5. Source changes pushed to `main` can deploy automatically through Cloudflare's Git integration. GitHub Actions runs catalogue validation, lint, tests and the static build without cloud credentials. These checks do not themselves deploy anything.
 
+## Edit email and Instagram
+
+The Contact page and footer share `src/content/contact.json`:
+
+```json
+{
+  "email": "modestchic00@gmail.com",
+  "instagramHandle": "modestchic.pk"
+}
+```
+
+Use the public business email and the Instagram username without `@` or a full URL. Set either value to `""` to hide that channel in both locations. Invalid nonempty values fail the build with a `Contact settings:` error. These settings are public; never put passwords or customer details here.
+
+To update through GitHub, open that file, select **Edit**, change the values, and choose **Create a new branch for this commit and start a pull request**. Review the diff and checks before merging into `main`. Cloudflare then builds and deploys the new values automatically; verify the deployment succeeds and check both the Contact page and footer on the live site. A local edit or unmerged pull request does not update production. For local verification, run `npm test`, `npm run lint` and `npm run build:static`.
+
+Email links open the customer's email app with the recipient filled in; they do not send mail automatically. Instagram links open the profile in a new tab; messaging availability depends on the account settings and Instagram sign-in. WhatsApp remains the main ordering channel and appears first in the footer contact list, using `NEXT_PUBLIC_WHATSAPP_NUMBER` and the general enquiry message. If the number is blank or invalid, the footer WhatsApp link is hidden. No backend or paid integration is needed.
+
 ## Build and host for free
 
 - Local development: `npm run dev -- -p 3001`. Static data is the default, even if an API is running locally.
@@ -37,6 +56,8 @@ The build script copies the storefront into ignored `.static-site/`, excludes se
 ## Optional GA4 analytics
 
 No Google tag, analytics request or tracking consent banner is enabled without a valid `NEXT_PUBLIC_GA_MEASUREMENT_ID`. Do not use a made-up ID in production.
+
+Static browser protections, dependency checks and account setup are documented in [SECURITY.md](SECURITY.md).
 
 1. In Google Analytics create an account/property for Modest Chic, choose the reporting timezone and PKR currency, and create a Web stream for the published storefront URL.
 2. Review Google's terms yourself. Copy the stream's public `G-...` Measurement ID.

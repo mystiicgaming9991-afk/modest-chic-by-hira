@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { Camera, Mail, MessageCircle } from "lucide-react";
+import { getContactChannels } from "@/lib/contact";
+import { contactEnquiry, whatsappLink, whatsappNumber } from "@/lib/whatsapp";
 
 const footerLinks = {
   shop: {
@@ -34,6 +37,8 @@ const footerLinks = {
 };
 
 export function Footer() {
+  const { email, instagram } = getContactChannels();
+  const number = whatsappNumber(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER);
   const [year, setYear] = useState<number | null>(null);
 
   useEffect(() => {
@@ -65,6 +70,20 @@ export function Footer() {
             <p className="body-sm text-cream/60 mb-6 max-w-xs leading-relaxed">
               A warm, considered edit of hijabs and modest style by Hira &amp; Muqadas.
             </p>
+            {(number || email || instagram) && (
+              <ul aria-label="Contact channels" className="space-y-3 text-sm">
+                {number && (
+                  <li>
+                    <a href={whatsappLink(number, contactEnquiry())} className="inline-flex max-w-full items-start gap-2 rounded text-cream/80 hover:text-cream focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cream">
+                      <MessageCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+                      <span>Chat on WhatsApp</span>
+                    </a>
+                  </li>
+                )}
+                {email && <li><a href={email.href} className="inline-flex max-w-full items-start gap-2 rounded text-cream/80 hover:text-cream focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cream"><Mail aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" /><span className="min-w-0 break-all"><span className="sr-only">Email: </span>{email.label}</span></a></li>}
+                {instagram && <li><a href={instagram.href} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-full items-start gap-2 rounded text-cream/80 hover:text-cream focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cream"><Camera aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" /><span className="min-w-0 break-all"><span className="sr-only">Instagram: </span>{instagram.label}<span className="sr-only"> (opens in a new tab)</span></span></a></li>}
+              </ul>
+            )}
           </div>
 
           {/* Link Columns */}
