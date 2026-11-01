@@ -2,3 +2,7 @@
 name = "modest-chic-by-hira"
 pages_build_output_dir = "./out"
 compatibility_date = "2026-10-31"
+
+# Public build settings. Keep these in sync when connecting a custom domain.
+[vars]
+NEXT_PUBLIC_SITE_URL = "https://modest-chic-by-hira.pages.dev"

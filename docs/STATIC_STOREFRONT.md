@@ -17,7 +17,7 @@ The GitHub repository is `mystiicgaming9991-afk/modest-chic-by-hira`. The packag
 
 1. Create a **Pages** project in Cloudflare and connect this GitHub repository; select production branch `main`.
 2. Select no/custom framework preset. Set build command `npm run build:static` and output directory `out`. `.node-version` pins Node 24 and `wrangler.toml` declares the static output directory.
-3. Set `NEXT_PUBLIC_SITE_URL` to the actual published HTTPS origin once available, then rebuild. The public business number is already configured. GA4 remains disabled until a real Measurement ID is provided.
+3. Public build settings are managed by `[vars]` in `wrangler.toml`, which Cloudflare treats as the configuration source of truth. `NEXT_PUBLIC_SITE_URL` is set to `https://modest-chic-by-hira.pages.dev`; update it when connecting a custom domain, then rebuild. The public business number is already configured. GA4 remains disabled until a real Measurement ID is provided.
 4. Do not configure a Workers deployment command or a Python backend for this static launch.
 5. Source changes pushed to `main` can deploy automatically through Cloudflare's Git integration. GitHub Actions runs catalogue validation, lint, tests and the static build without cloud credentials. These checks do not themselves deploy anything.
 
@@ -30,7 +30,7 @@ The GitHub repository is `mystiicgaming9991-afk/modest-chic-by-hira`. The packag
 - The public business number defaults to `923144660921`. Override with `NEXT_PUBLIC_WHATSAPP_NUMBER` at build time if it changes.
 - `_headers` and `_redirects` are included for Cloudflare Pages. `/checkout` sends customers to `/cart/`; other hosts must configure equivalent rules. There is also a static checkout landing page linking to the cart.
 - Product routes are generated only for catalogue products. Unknown slugs return 404. With an empty catalogue, there are no product routes to publish.
-- No registration, cloud account or production deployment has been performed by this local build.
+- The production storefront is hosted at `https://modest-chic-by-hira.pages.dev`. Running a local build does not publish it; pushes to `main` trigger Cloudflare's deployment.
 
 The build script copies the storefront into ignored `.static-site/`, excludes server/account/admin routes, applies the small `static/app` entrypoints, and builds into `out/`. Shared UI, data types, context interfaces and the Python backend remain in the original source. Do not edit generated files. API development remains available with `COMMERCE_API_URL=http://127.0.0.1:8000 npm run dev:api -- -p 3001`; restoring a hosted backend still requires deploying its services and configuring trusted origins/credentials.
 
@@ -41,7 +41,7 @@ No Google tag, analytics request or tracking consent banner is enabled without a
 1. In Google Analytics create an account/property for Modest Chic, choose the reporting timezone and PKR currency, and create a Web stream for the published storefront URL.
 2. Review Google's terms yourself. Copy the stream's public `G-...` Measurement ID.
 3. **Turn Enhanced measurement off for this stream** to prevent duplicate navigation/outbound-click events and automatic collection of full WhatsApp URLs, message text or search parameters. Keep Google Signals and advertising features off for this setup.
-4. Set `NEXT_PUBLIC_GA_MEASUREMENT_ID` in the hosting build environment and rebuild.
+4. Set `NEXT_PUBLIC_GA_MEASUREMENT_ID` under `[vars]` in `wrangler.toml` for Cloudflare Pages (or in the build environment for another host) and rebuild. This ID is public; never put account credentials in that file.
 5. On the website select Allow analytics, then verify events in GA4 Realtime/DebugView. Declining must leave shopping functional and send no GA events. Analytics settings lets visitors change their choice.
 
 Events: `page_view`, `view_item`, `view_cart`, `add_to_cart`, `remove_from_cart`, and `whatsapp_click`. Product events contain public product identifiers, selected variants, quantity, PKR currency and value. Page URLs omit queries; outbound events omit the WhatsApp number, destination URL and prepared message. Free-text searches and customer details are not sent. `?utm_source=instagram` is explicitly recognised as social traffic. Configure the Instagram bio link with that parameter after publishing.
