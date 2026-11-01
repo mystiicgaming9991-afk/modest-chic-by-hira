@@ -36,7 +36,7 @@ Use the public business email and the Instagram username without `@` or a full U
 
 To update through GitHub, open that file, select **Edit**, change the values, and choose **Create a new branch for this commit and start a pull request**. Review the diff and checks before merging into `main`. Cloudflare then builds and deploys the new values automatically; verify the deployment succeeds and check both the Contact page and footer on the live site. A local edit or unmerged pull request does not update production. For local verification, run `npm test`, `npm run lint` and `npm run build:static`.
 
-Email links open the customer's email app with the recipient filled in; they do not send mail automatically. Instagram links open the profile in a new tab; messaging availability depends on the account settings and Instagram sign-in. WhatsApp remains the main ordering channel. No backend or paid integration is needed.
+Email links open the customer's email app with the recipient filled in; they do not send mail automatically. Instagram links open the profile in a new tab; messaging availability depends on the account settings and Instagram sign-in. WhatsApp remains the main ordering channel and appears first in the footer contact list, using `NEXT_PUBLIC_WHATSAPP_NUMBER` and the general enquiry message. If the number is blank or invalid, the footer WhatsApp link is hidden. No backend or paid integration is needed.
 
 ## Build and host for free
 
