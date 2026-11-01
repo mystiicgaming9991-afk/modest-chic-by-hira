@@ -49,14 +49,14 @@ Studio uses narrow dependency overrides for patched CLI transitive dependencies.
 1. The account currently shows a **$0 Growth Trial** and explicitly states that it will automatically downgrade to **Free** after the trial. The integration uses only Free-plan features; do not upgrade or add paid add-ons. Retain account ownership. Free datasets are public and Free roles are administrator/viewer.
 2. The Studio is deployed at `https://modest-chic-k8aco52i.sanity.studio/`. To update its editing fields/interface later, run `npm run deploy` from the authenticated Studio folder. Ordinary product edits do not require Studio deployment. Hosted Studio access still requires Sanity authentication for editing. Do not deploy the Python backend for this flow.
 3. Review the website feature branch through a pull request. Merge and complete the first CMS-enabled Cloudflare deployment before enabling automatic product publishing. This integration does not authorize pushing or merging the branch automatically.
-4. In Cloudflare **Workers & Pages → modest-chic-by-hira → Settings → Build → Deploy Hooks**, create a hook for branch `main`, named `Sanity catalogue publish`. Treat its URL as a secret: never add it to Git, public environment variables or browser code.
-5. In the Sanity project's **API → Webhooks**, add a webhook targeting that URL. Select dataset `production`; trigger on create, update and delete. Leave draft/version events off. Use this filter:
+4. The Cloudflare hook **Sanity catalogue publish** has been created for branch `main`. Its URL is a secret: never add it to Git, public environment variables or browser code.
+5. The Sanity webhook **Cloudflare catalogue publish** is configured for dataset `production`, with create, update and delete enabled and this GROQ filter:
 
    ```groq
    _type in ["product", "category", "collection"] && !(_id in path("drafts.**")) && !(_id in path("versions.**"))
    ```
 
-6. Keep the webhook disabled until step 3 is complete. Then enable it, publish a real product and confirm: webhook delivery → successful Cloudflare deployment → product page/cart/WhatsApp details. Do not publish invented test products to the customer's catalogue. The hook redeploys the configured Git branch; it does not bypass GitHub branch protection or merge code.
+6. The Sanity webhook is currently **disabled**. Keep it that way until step 3 is complete. Then enable it, publish a real product and confirm: webhook delivery → successful Cloudflare deployment → product page/cart/WhatsApp details. Do not publish invented test products to the customer's catalogue. The hook redeploys the configured Git branch; it does not bypass GitHub branch protection or merge code.
 
 Sanity currently includes two webhooks on Free; Cloudflare Pages currently includes 500 builds/month and one concurrent Free build. Publish related edits together where possible. Review CMS and build usage; API/bandwidth quota failures can block publication even though the old static storefront remains hosted. No paid add-on is needed for this setup.
 
