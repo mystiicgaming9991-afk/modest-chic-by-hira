@@ -38,6 +38,8 @@ The build script copies the storefront into ignored `.static-site/`, excludes se
 
 No Google tag, analytics request or tracking consent banner is enabled without a valid `NEXT_PUBLIC_GA_MEASUREMENT_ID`. Do not use a made-up ID in production.
 
+Static browser protections, dependency checks and account setup are documented in [SECURITY.md](SECURITY.md).
+
 1. In Google Analytics create an account/property for Modest Chic, choose the reporting timezone and PKR currency, and create a Web stream for the published storefront URL.
 2. Review Google's terms yourself. Copy the stream's public `G-...` Measurement ID.
 3. **Turn Enhanced measurement off for this stream** to prevent duplicate navigation/outbound-click events and automatic collection of full WhatsApp URLs, message text or search parameters. Keep Google Signals and advertising features off for this setup.

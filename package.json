@@ -11,6 +11,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "test:static-security": "node --test scripts/static-security.test.mjs",
     "test:watch": "vitest",
     "build:static": "node scripts/build-static.mjs",
     "catalog:check": "node scripts/validate-catalog.mjs",
