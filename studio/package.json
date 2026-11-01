@@ -1,0 +1,34 @@
+{
+  "name": "modest-chic-catalogue-studio",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": { "node": ">=22.12" },
+  "scripts": {
+    "dev": "sanity dev --host 127.0.0.1",
+    "build": "sanity build",
+    "deploy": "sanity deploy",
+    "login": "sanity login",
+    "typecheck": "tsc --noEmit",
+    "seed:groups": "sanity exec scripts/seed-groups.ts --with-user-token"
+  },
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "sanity": "6.21.0",
+    "styled-components": "6.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "@types/react": "^19",
+    "typescript": "^5"
+  },
+  "overrides": {
+    "@vercel/frameworks": {
+      "js-yaml": "3.15.2",
+      "smol-toml": "1.9.1"
+    },
+    "@oclif/core": { "minimatch": "11.0.3" },
+    "undici": "7.30.1"
+  }
+}

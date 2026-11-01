@@ -36,7 +36,7 @@ export interface Product {
   variants: ProductVariant[];
   displayImage: string;
   displayImageAlt: string;
-  displayImageKind: "brand" | "reference" | "illustration";
+  displayImageKind: "product" | "brand" | "reference" | "illustration";
   displayImageNote: string;
   imageCredit?: ImageCredit;
   rating: number;

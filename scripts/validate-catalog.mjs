@@ -34,7 +34,7 @@ export async function validateCatalog(root) {
     if (product.rating !== 0 || product.reviewCount !== 0) fail(`${product.slug}: do not publish unverified ratings; keep rating and reviewCount at 0`);
     if (!text(product.displayImageNote)) fail(`${product.slug}: describe the image accurately`);
     if (!Array.isArray(product.tags) || !Array.isArray(product.variants) || !product.variants.length) fail(`${product.slug}: tags and at least one variant are required`);
-    if (!['brand', 'reference', 'illustration'].includes(product.displayImageKind)) fail(`${product.slug}: invalid image kind`);
+    if (!['product', 'brand', 'reference', 'illustration'].includes(product.displayImageKind)) fail(`${product.slug}: invalid image kind`);
     if (product.displayImage.includes('product-placeholder')) fail(`${product.slug}: add a real catalogue image before publishing`);
     for (const variant of product.variants) {
       if (!text(variant.id) || variantIds.has(variant.id) || !text(variant.sku) || skus.has(variant.sku)) fail(`${product.slug}: duplicate or missing variant ID/SKU`);

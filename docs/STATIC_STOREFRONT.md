@@ -1,8 +1,10 @@
 # Static storefront
 
-The public website uses an empty, real-product catalogue in `src/content/catalog.json`. It never imports local database test products. It needs no API, database, Redis, credentials or continuously running computer. WhatsApp is the order-enquiry channel; availability and all order terms are confirmed in chat.
+The public website can build its catalogue from Sanity, selected by `catalogue.config.json`. See [Sanity catalogue setup and publishing](SANITY_CATALOGUE.md). The file source in `src/content/catalog.json` remains intentionally empty and is used for local development and deterministic CI. It never imports local database test products. The deployed storefront needs no running API, database, Redis, credentials or continuously running computer. WhatsApp is the order-enquiry channel; availability and all order terms are confirmed in chat.
 
-## Add a product
+## Add a product in file mode
+
+For Sanity mode, add and publish products in Studio instead. These steps are for `STOREFRONT_CATALOG_SOURCE=file` builds.
 
 1. Copy actual product photographs into `public/images/products/`. Compress them to WebP before adding them; aim for a few hundred KB rather than camera originals.
 2. Copy the object in `docs/product.example.json` into the catalogue's `products` array. The example is documentation only and is not published. Replace every example value with accurate product details and a photo that exists.

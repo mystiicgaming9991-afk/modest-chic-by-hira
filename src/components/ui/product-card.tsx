@@ -9,6 +9,7 @@ import { useWishlist } from "@/lib/context/wishlist-context";
 import { useToast } from "@/lib/context/toast-context";
 import type { Product } from "@/lib/data";
 import { formatPrice } from "@/lib/data";
+import { productImageLabel } from "@/lib/product-image";
 
 export function ProductCard({ product, preloadImage = false, eagerImage = false }: { product: Product; preloadImage?: boolean; eagerImage?: boolean }) {
   const { addItem } = useCart();
@@ -45,7 +46,7 @@ export function ProductCard({ product, preloadImage = false, eagerImage = false 
         <Link href={`/shop/${product.slug}`} className="block" aria-label={`View ${product.title}`}>
           <div className="relative aspect-[3/4] overflow-hidden bg-warm-cream">
             <Image src={product.displayImage} alt={product.displayImageAlt} fill {...(preloadImage ? { preload: true } : { loading: eagerImage ? "eager" : "lazy" })} sizes="(max-width: 640px) 45vw, (max-width: 1280px) 30vw, 21vw" className="object-cover object-center transition-transform duration-500 group-hover:scale-[1.04]" />
-            <span className="absolute bottom-3 right-3 hidden rounded-full bg-cream/95 px-2.5 py-1 text-[10px] font-medium tracking-wide text-charcoal shadow-sm sm:block">{product.displayImageKind === "brand" ? "Collection photo" : product.displayImageKind === "illustration" ? "Illustrative image" : "Style reference"}</span>
+            <span className="absolute bottom-3 right-3 hidden rounded-full bg-cream/95 px-2.5 py-1 text-[10px] font-medium tracking-wide text-charcoal shadow-sm sm:block">{productImageLabel(product.displayImageKind)}</span>
           </div>
         </Link>
         <div className="pointer-events-none absolute left-3 top-3 flex flex-col gap-1.5">

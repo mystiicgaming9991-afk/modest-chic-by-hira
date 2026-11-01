@@ -4,10 +4,11 @@ import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { validateCatalog } from './validate-catalog.mjs';
 import { cloudflareSecurityHeaders, secureStaticHtml } from './static-security.mjs';
+import { importSanityCatalog, readCatalogueConfig } from './sanity-catalog.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const stage = path.join(root, '.static-site');
-const catalog = await validateCatalog(root);
+const catalogueConfig = await readCatalogueConfig(root);
 await rm(stage, { recursive: true, force: true });
 await mkdir(stage, { recursive: true });
 // Build an isolated storefront. The original API routes, admin and backend stay intact.
@@ -20,9 +21,10 @@ await cp(path.join(root, 'src'), path.join(stage, 'src'), {
   },
 });
 await cp(path.join(root, 'static/app'), path.join(stage, 'src/app'), { recursive: true });
+await cp(path.join(root, 'public'), path.join(stage, 'public'), { recursive: true });
+const catalog = catalogueConfig.source === 'sanity' ? await importSanityCatalog(stage, catalogueConfig) : await validateCatalog(stage);
 if (!catalog.products.length) await rm(path.join(stage, 'src/app/(storefront)/shop/[slug]'), { recursive: true, force: true });
 if (!catalog.collections.length) await rm(path.join(stage, 'src/app/(storefront)/collections/[slug]'), { recursive: true, force: true });
-await cp(path.join(root, 'public'), path.join(stage, 'public'), { recursive: true });
 for (const filename of ['package.json', 'tsconfig.json']) await cp(path.join(root, filename), path.join(stage, filename));
 await symlink(path.join(root, 'node_modules'), path.join(stage, 'node_modules'), 'dir');
 const number = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '923144660921';

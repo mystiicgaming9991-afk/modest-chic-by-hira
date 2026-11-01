@@ -57,4 +57,9 @@ describe("WhatsApp enquiries", () => {
     expect(message).toContain("Estimated subtotal: Rs. 3,500");
     expect(message).toContain("not a confirmed order");
   });
+
+  it("includes imported product photographs in enquiries", () => {
+    const imported = { ...product, displayImageKind: "product" as const, displayImage: "/images/catalogue/photo.webp" };
+    expect(productEnquiry(imported, variant, "https://shop.example")).toContain("Photo: https://shop.example/images/catalogue/photo.webp");
+  });
 });

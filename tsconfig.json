@@ -43,6 +43,7 @@
     "node_modules",
     ".static-site",
     "static",
+    "studio",
     "out"
   ]
 }
